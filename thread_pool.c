@@ -20,6 +20,7 @@
 typedef struct {
     void (*function)(void *);
     void *argument;
+    pool_task_t *next;
 } pool_task_t;
 
 
@@ -41,6 +42,24 @@ static void *thread_do_work(void *pool);
  */
 pool_t *pool_create(int queue_size, int num_threads)
 {
+    pool_t *thread_pool;
+    
+    pthread_mutex_t mutex;
+    pthread_mutex_init(&mutex, NULL);
+    thread_pool->lock = mutex;
+    
+    pthread_cond_t cond;
+    pthread_cond_init(&cond, NULL);
+    thread_pool->notify = cond;
+    
+    thread_pool->threads = malloc(sizeof(pthread_t) * num_threads);
+    
+    thread_pool->queue = NULL;
+    
+    thread_pool->thread_count = num_threads;
+    
+    thread_pool->task_queue_size_limit = queue_size;
+
     return NULL;
 }
 

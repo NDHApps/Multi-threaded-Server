@@ -82,6 +82,8 @@ int main(int argc,char *argv[])
 
     // listen for incoming requests
     listen(listenfd, 10);
+    
+    pthread_t thread;
 
     // handle connections loop (forever)
     while(1)
@@ -89,7 +91,9 @@ int main(int argc,char *argv[])
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
         
         // single threaded
-        handle_connection(&connfd);
+        
+        pthread_create(&thread,NULL,handle_connection,&connfd);
+
     }
 }
 
