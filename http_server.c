@@ -60,7 +60,7 @@ int main(int argc,char *argv[])
 
     // initialize the threadpool
     // Set the number of threads and size of the queue
-    threadpool = pool_create(0,0);
+    threadpool = pool_create(20, MAX_THREADS);
 
 
     // Load the seats;
@@ -82,8 +82,6 @@ int main(int argc,char *argv[])
 
     // listen for incoming requests
     listen(listenfd, 10);
-    
-    pthread_t thread;
 
     // handle connections loop (forever)
     while(1)
@@ -91,8 +89,9 @@ int main(int argc,char *argv[])
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
         
         // single threaded
+        errno = pool_add_task(threadpool, (void (*)(void *))handle_connection, (void *)&connfd);
         
-        pthread_create(&thread,NULL,handle_connection,&connfd);
+//      pthread_create(&thread,NULL,handle_connection,&connfd);
 
     }
 }

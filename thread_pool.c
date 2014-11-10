@@ -14,13 +14,10 @@
  *  @var argument Argument to be passed to the function.
  */
 
-#define MAX_THREADS 20
-#define STANDBY_SIZE 8
-
-typedef struct {
+typedef struct __task_t {
     void (*function)(void *);
     void *argument;
-    pool_task_t *next;
+    struct __task_t *next;
 } pool_task_t;
 
 
@@ -42,7 +39,7 @@ static void *thread_do_work(void *pool);
  */
 pool_t *pool_create(int queue_size, int num_threads)
 {
-    pool_t *thread_pool;
+    pool_t *thread_pool = malloc(sizeof(pool_t));
     
     pthread_mutex_t mutex;
     pthread_mutex_init(&mutex, NULL);
@@ -71,7 +68,32 @@ pool_t *pool_create(int queue_size, int num_threads)
 int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
 {
     int err = 0;
-        
+    
+    pool_task_t* new_task;
+    new_task->function = function;
+    new_task->argument = argument;
+    new_task->next = NULL;
+    
+    pthread_mutex_lock(&(pool->lock));
+    
+    if (pool->queue == NULL) {
+        pool->queue = new_task;
+    } else {
+        pool_task_t* curr;
+        curr = pool->queue;
+        int queue_index = 1;
+        while (curr->next != NULL) {
+            curr = curr->next;
+            queue_index++;
+        }
+        if (queue_index < pool->task_queue_size_limit)
+            curr->next = new_task;
+        else
+            err = -1;
+    }
+    
+    pthread_mutex_unlock(&(pool->lock));
+    
     return err;
 }
 
