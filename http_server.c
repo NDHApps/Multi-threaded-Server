@@ -65,6 +65,7 @@ int main(int argc,char *argv[])
 
     // Load the seats;
     printf("Loading seats\n");
+    pthread_mutex_init(&slock, NULL);
     load_seats(num_seats); //TODO read from argv
 
     // set server address
