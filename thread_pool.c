@@ -21,7 +21,6 @@ typedef struct __task_t {
     struct __task_t *next;
 } pool_task_t;
 
-
 struct pool_t {
   pthread_mutex_t lock;
   pthread_cond_t notify;
@@ -106,10 +105,11 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     if (!err) {
       fflush(stdout);
       pool->num_tasks++;
-      rc = pthread_mutex_unlock(&(pool->lock));
-      if (!rc) printf("%d is gave up the lock in add_task\n", r);
-      else printf("Error giving up the lock\n");
       pthread_cond_signal(&(pool->notify));
+      printf("%d signaled that he added to the queue\n", r);
+      rc = pthread_mutex_unlock(&(pool->lock));
+      if (!rc) printf("%d gave up the lock in add_task\n", r);
+      else printf("Error giving up the lock\n");
 
     } else {
       printf("There was an error ading to the queue\n");
@@ -156,9 +156,11 @@ static void *thread_do_work(void *pool)
     r = rand() % 10000;
     pool_t *tpool = (pool_t*)pool;
     while(1) {
+      pthread_mutex_lock(&(tpool->lock));
       while (tpool->num_tasks == 0) {
+        printf("%d is waiting for a signal\n", r);
         pthread_cond_wait(&(tpool->notify), &(tpool->lock));
-        printf("%d aquired lock in thread_do_work\n", r);
+        printf("%d recieved a signal, acquired lock in thread_do_work\n", r);
       }
       printf("%d is running a task in the queue in thread_do_work\n", r);
       pool_task_t* next = tpool->queue->next;
