@@ -100,12 +100,13 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     }
 
     printf("%d is giving up the lock\n", r);
-    pthread_mutex_unlock(&(pool->lock));
     if (!err) {
       pool->num_tasks++;
+      pthread_mutex_unlock(&(pool->lock));
       pthread_cond_signal(&(pool->notify));
     }
 
+    pthread_mutex_unlock(&(pool->lock));
     printf("Successfully added to the queue!\n");
     return err;
 }
@@ -119,7 +120,6 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
 int pool_destroy(pool_t *pool)
 {
     int err = 0;
-
     return err;
 }
 
@@ -137,8 +137,9 @@ static void *thread_do_work(void *pool)
         pthread_cond_wait(&(tpool->notify), &(tpool->lock));
         printf("Lock aquired in thread_do_work\n");
       }
-        // we have the lock when we enter here, mostly needless check
+      // we have the lock when we enter here, mostly needless check
       if (tpool->num_tasks != 0) {
+        printf("A thread is removing a task from the queue!\n");
         pool_task_t* next = tpool->queue->next;
         tpool->queue->function(tpool->queue->argument);
         tpool->num_tasks--;
