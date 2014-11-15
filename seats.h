@@ -1,10 +1,12 @@
 #ifndef _SEAT_OPERATIONS_H_
 #define _SEAT_OPERATIONS_H_
 
-typedef enum 
+#include <pthread.h>
+
+typedef enum
 {
-    AVAILABLE, 
-    PENDING, 
+    AVAILABLE,
+    PENDING,
     OCCUPIED
 } seat_state_t;
 
@@ -17,6 +19,7 @@ typedef struct seat_struct
     pthread_mutex_t lock;
 } seat_t;
 
+pthread_mutex_t slock;
 
 void load_seats(int);
 void unload_seats();

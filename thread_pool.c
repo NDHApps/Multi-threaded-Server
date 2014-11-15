@@ -119,7 +119,15 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
  */
 int pool_destroy(pool_t *pool)
 {
+    printf("Freeing resources\n");
+    //pthread_mutex_lock(&pool->lock);
     int err = 0;
+    free(pool->threads);
+    free(pool->queue);
+    //pthread_mutex_unlock(&pool->lock);
+    pthread_mutex_destroy(&pool->lock);
+    pthread_cond_destroy(&pool->notify);
+    printf("Resources destroyed\n");
     return err;
 }
 
