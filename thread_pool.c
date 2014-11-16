@@ -79,12 +79,11 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     int r = rand() % 10000;
 
     printf("%d is waiting in add_task\n", r);
-    fflush(stdout);
     rc = pthread_mutex_lock(&(pool->lock));
     if (!rc) printf("%d has the lock in add_task\n", r);
     else printf("%d had an error locking\n", r);
 
-    pool_task_t* new_task = malloc(sizeof(pool_task_t*));
+    pool_task_t* new_task = malloc(sizeof(pool_task_t));
     new_task->function = function;
     new_task->argument = argument;
     new_task->next = NULL;
@@ -103,7 +102,6 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     }
 
     if (!err) {
-      fflush(stdout);
       pool->num_tasks++;
       pthread_cond_signal(&(pool->notify));
       printf("%d signaled that he added to the queue\n", r);
@@ -114,8 +112,7 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     } else {
       printf("There was an error ading to the queue\n");
       pthread_mutex_unlock(&(pool->lock));
-      printf("%d is gave up the lock in add_task\n", r);
-      fflush(stdout);
+      printf("%d gave up the lock in add_task\n", r);
     }
 
     return err;
@@ -130,7 +127,6 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
 int pool_destroy(pool_t *pool)
 {
     printf("Freeing resources\n");
-    fflush(stdout);
     //pthread_mutex_lock(&pool->lock);
     int err = 0;
     free(pool->threads);
@@ -139,7 +135,6 @@ int pool_destroy(pool_t *pool)
     pthread_mutex_destroy(&pool->lock);
     pthread_cond_destroy(&pool->notify);
     printf("Resources destroyed\n");
-    fflush(stdout);
     return err;
 }
 
@@ -162,14 +157,18 @@ static void *thread_do_work(void *pool)
         pthread_cond_wait(&(tpool->notify), &(tpool->lock));
         printf("%d recieved a signal, acquired lock in thread_do_work\n", r);
       }
-      printf("%d is running a task in the queue in thread_do_work\n", r);
-      pool_task_t* next = tpool->queue->next;
-      tpool->queue->function(tpool->queue->argument);
-      tpool->num_tasks--;
-      tpool->queue = next;
-      rc = pthread_mutex_unlock(&tpool->lock);
-      if (!rc) { printf("%d gave up the lock in thread_do_work\n", r); fflush(stdout); }
-      else printf("There was an error unlocking\n");
+      if (tpool->num_tasks > 0) {
+        printf("%d is running a task in the queue in thread_do_work\n", r);
+        pool_task_t* next = tpool->queue->next;
+        tpool->queue->function(tpool->queue->argument);
+        tpool->queue = next;
+        tpool->num_tasks--;
+        rc = pthread_mutex_unlock(&tpool->lock);
+        if (!rc) { printf("%d gave up the lock in thread_do_work\n", r); fflush(stdout); }
+        else printf("There was an error unlocking\n");
+      } else {
+        printf("A thread exited but didn't do anything\n");
+      }
     }
 
     pthread_exit(NULL);
