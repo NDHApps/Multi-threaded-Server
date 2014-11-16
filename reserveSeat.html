@@ -22,12 +22,13 @@
     <script>
       function confirm() {
         var seatNum = getParameterByName("seat");
+        var userNum = getParameterByName("user");
         if (seatNum == null || seatNum == "") {
           alert("No seat number specified");
           return;
         }
 
-        var l = "confirm?userseat=" + seatNum;
+        var l = "confirm?seat=" + seatNum + "user=" + userNum;
         $.ajax({
           dataType: "text",
           url: l,
@@ -66,7 +67,7 @@
 
       (function() {
         var seatNum = getParameterByName("seat");
-        
+
         var qs_userid = getParameterByName("user");
         if (qs_userid == "") {
             //redirect
