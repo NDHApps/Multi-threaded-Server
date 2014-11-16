@@ -19,6 +19,7 @@ typedef struct __task_t {
     void (*function)(void *);
     void *argument;
     struct __task_t *next;
+    int id;
 } pool_task_t;
 
 struct pool_t {
@@ -73,23 +74,29 @@ pool_t *pool_create(int queue_size, int num_threads)
  * Add a task to the threadpool
  *
  */
-int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
+int pool_add_task(pool_t *pool, void (*function)(void *), void *argument, int jobno)
 {
     int rc;
     int err = 0;
     int r = rand() % 10000;
 
-    printf("%d [%d] is waiting in add_task \n", r, pool->num_tasks);
+    if (LDEBUG) printf("%d [%d] is waiting in add_task \n", r, pool->num_tasks);
     rc = pthread_mutex_lock(&(pool->lock));
-    if (!rc) printf("%d [%d] has the lock in add_task\n", r, pool->num_tasks);
+    if (!rc) {
+      if (LDEBUG) {
+        printf("%d [%d] has the lock in add_task\n", r, pool->num_tasks);
+      }
+    }
     else printf("%d had an error locking\n", r);
 
     pool_task_t* new_task = malloc(sizeof(pool_task_t));
     new_task->function = function;
     new_task->argument = argument;
     new_task->next = NULL;
+    new_task->id = jobno;
 
 
+    if (JDEBUG) printf("%d is adding job %d to the queue\n", r, new_task->id);
     if (pool->queue == NULL) {
         pool->queue = new_task;
     } else {
@@ -103,9 +110,8 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     }
 
     if (!err) {
-      printf("%d [%d] is incrementing the counter in pool_add_task\n", r, pool->num_tasks);
       pool->num_tasks++;
-      printf("%d [%d] signaled that he added to the queue\n", r, pool->num_tasks);
+      if (LDEBUG) printf("%d [%d] signaled that he added to the queue\n", r, pool->num_tasks);
       pthread_cond_signal(&(pool->notify));
       rc = pthread_mutex_unlock(&(pool->lock));
       if (!rc) printf("%d [%d] gave up the lock in add_task\n", r, pool->num_tasks);
@@ -159,27 +165,26 @@ static void *thread_do_work(void *pool)
     r = rand() % 10000;
     pool_t *tpool = (pool_t*)pool;
     while(1) {
-      printf("%d is waiting for the lock at top of thread_do_work\n", r);
       pthread_mutex_lock(&(tpool->lock));
       while (tpool->num_tasks == 0) {
-        printf("%d [%d] is waiting for a signal\n", r, tpool->num_tasks);
+        if (LDEBUG) printf("%d [%d] is waiting for a signal\n", r, tpool->num_tasks);
         pthread_cond_wait(&tpool->notify, &tpool->lock);
-        printf("%d [%d] recieved a signal, acquired lock in thread_do_work\n", r, tpool->num_tasks);
-        if (tpool->num_tasks == 0) { printf("%d woke up BUT THERE ARE NO TASKS TO DO!\n", r); }
+        if (LDEBUG) printf("%d [%d] recieved a signal, acquired lock in thread_do_work\n", r, tpool->num_tasks);
         if (shutdown) {
           printf("%d is exiting\n", r);
           pthread_exit(NULL);
        }
       }
       if (tpool->num_tasks > 0) {
-        printf("%d [%d] is running a task in the queue in thread_do_work\n", r, tpool->num_tasks);
         pool_task_t* next = tpool->queue->next;
+        if (JDEBUG) printf("Running job %d\n", tpool->queue->id);
         tpool->queue->function(tpool->queue->argument);
         tpool->queue = next;
-        printf("%d [%d] is decrementing the counter in thread_do_word\n", r, tpool->num_tasks);
         tpool->num_tasks--;
         rc = pthread_mutex_unlock(&tpool->lock);
-        if (!rc) { printf("%d [%d] gave up the lock in thread_do_work\n", r, tpool->num_tasks); fflush(stdout); }
+        if (!rc) {
+         if (LDEBUG) printf("%d [%d] gave up the lock in thread_do_work\n", r, tpool->num_tasks); fflush(stdout);
+        }
         else printf("There was an error unlocking\n");
       } else {
         printf("A thread exited but didn't do anything\n");

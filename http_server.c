@@ -22,6 +22,7 @@ void shutdown_server(int);
 
 int listenfd;
 pool_t* threadpool;
+int jobno = 0;
 
 int main(int argc,char *argv[])
 {
@@ -90,9 +91,12 @@ int main(int argc,char *argv[])
     {
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
+        jobno++;
+        if (JDEBUG) printf("Listening for tasks, added %d\n", jobno);
         errno = pool_add_task(threadpool,
                 (void (*)(void *))handle_connection,
-                (void *)&connfd);
+                (void *)&connfd,
+                jobno);
         if(errno) printf("Error adding task\n");
     }
 }
