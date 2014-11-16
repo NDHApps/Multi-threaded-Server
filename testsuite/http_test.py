@@ -82,8 +82,6 @@ def run_correctness_trace(config, trace, host, port, _id=0):
             else:
                 assertion = None
                 #have http_request return a value
-            print "Running request %d" % d
-            j += 1
             http_request(host, port, req, float(config['sleeptime']), _id=_id,\
             assertion=assertion)
 def run_performance_trace(config, trace, host, port, _id=0):
