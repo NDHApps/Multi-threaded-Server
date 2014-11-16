@@ -9,7 +9,7 @@ successes = Queue()
 failures = Queue()
 
 def parse_trace(tracefile='1.trace'):
-    
+
     config = {}
     trace = []
     traces = [] #list of lists/dicts
@@ -21,7 +21,7 @@ def parse_trace(tracefile='1.trace'):
         l = l.strip()
 
         if len(l) == 0: continue
-        
+
         #check for comments
         if l.startswith('%'):
             continue
@@ -45,12 +45,12 @@ def parse_trace(tracefile='1.trace'):
 
     if len(trace) != 0:
         traces.append(trace)
-            
 
-    return config, traces           
- 
+
+    return config, traces
+
 def run_trace(config, traces, host, port):
-    
+
     num_threads = int(config['threads'])
     threads = []
     for i in range(num_threads):
@@ -71,10 +71,10 @@ def run_trace(config, traces, host, port):
     analyze_trace()
 
 def run_correctness_trace(config, trace, host, port, _id=0):
-    
+
     num_requests = int(config['requests'])
     for i in range(num_requests):
-        
+
         for req in trace:
             if ' ' in req:
                 req, assertion = req.split(' ', 1)
@@ -84,7 +84,7 @@ def run_correctness_trace(config, trace, host, port, _id=0):
             http_request(host, port, req, float(config['sleeptime']), _id=_id,\
             assertion=assertion)
 def run_performance_trace(config, trace, host, port, _id=0):
-    
+
     num_requests = int(config['requests'])
     for i in range(num_requests):
 
@@ -96,7 +96,7 @@ def http_request(host, port, obj, sleeptime=0.0, method='GET', **kwargs):
     _id = 0
     if '_id' in kwargs:
         _id = kwargs['_id']
-    
+
     assertion = None
     if 'assertion' in kwargs:
         assertion = kwargs['assertion']
@@ -108,18 +108,18 @@ def http_request(host, port, obj, sleeptime=0.0, method='GET', **kwargs):
         conn.request(method, obj)
 
         response = conn.getresponse()
-        responseStr = response.read()        
+        responseStr = response.read()
         conn.close()
 
         responseStr = responseStr.strip()
-        
+
     except Exception as e:
         #HTTP Connection error
         #print 'HTTP Connection Error', e
         conn.close()
         failures.put(start)
         return False
-    
+
     end = time.time()
 
     if assertion is not None and responseStr != assertion:
@@ -128,7 +128,7 @@ def http_request(host, port, obj, sleeptime=0.0, method='GET', **kwargs):
         failures.put(start)
         return False
 
-        
+
     if response.status != 200:
         #failed request
         print obj, 'Failed Request with incorrect status: %s' % response.status
@@ -140,11 +140,11 @@ def http_request(host, port, obj, sleeptime=0.0, method='GET', **kwargs):
     #'length=%s'%len(responseStr), (end-start-sleeptime)*1000
 
     successes.put((start, (end-start-sleeptime)*1000))
-    
+
     return True
 
 def analyze_trace():
-    
+
     suc = []
     fail = []
 
@@ -163,11 +163,11 @@ def analyze_trace():
         pass
 
     total = len(suc) + len(fail)
-    
+
     print 'Total: %s'%total, 'Success: %s'%len(suc), 'Fail: %s'%len(fail)
 
     suc.sort(key=lambda x: x[0])
-    
+
     total_dur = 0.0
     for start,dur in suc:
         total_dur += dur
@@ -177,7 +177,7 @@ def analyze_trace():
 
     total_time = (suc[-1][0] - suc[0][0])
     print 'Total Time = %s seconds' % total_time
-    
+
 
 
 if __name__ == '__main__':
@@ -194,9 +194,9 @@ if __name__ == '__main__':
 
 
     config, traces = parse_trace(tracefile)
-    
+
     print 'Running Trace: %s' % tracefile
     run_trace(config, traces, host, port)
-    
+
 
 

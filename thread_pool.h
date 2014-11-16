@@ -1,7 +1,7 @@
 #ifndef _THREADPOOL_H_
 #define _THREADPOOL_H_
 
-#define MAX_THREADS 20
+#define MAX_THREADS 2
 #define STANDBY_SIZE 8
 
 typedef struct pool_t pool_t;

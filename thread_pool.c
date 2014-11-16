@@ -33,6 +33,7 @@ struct pool_t {
 
 static void *thread_do_work(void *pool);
 
+int shutdown = 0;
 
 /*
  * Create a threadpool, initialize variables, etc
@@ -78,9 +79,9 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     int err = 0;
     int r = rand() % 10000;
 
-    printf("%d is waiting in add_task\n", r);
+    printf("%d [%d] is waiting in add_task \n", r, pool->num_tasks);
     rc = pthread_mutex_lock(&(pool->lock));
-    if (!rc) printf("%d has the lock in add_task\n", r);
+    if (!rc) printf("%d [%d] has the lock in add_task\n", r, pool->num_tasks);
     else printf("%d had an error locking\n", r);
 
     pool_task_t* new_task = malloc(sizeof(pool_task_t));
@@ -102,12 +103,13 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
     }
 
     if (!err) {
+      printf("%d [%d] is incrementing the counter in pool_add_task\n", r, pool->num_tasks);
       pool->num_tasks++;
-      rc = pthread_mutex_unlock(&(pool->lock));
-      if (!rc) printf("%d gave up the lock in add_task\n", r);
-      else printf("Error giving up the lock\n");
+      printf("%d [%d] signaled that he added to the queue\n", r, pool->num_tasks);
       pthread_cond_signal(&(pool->notify));
-      printf("%d signaled that he added to the queue\n", r);
+      rc = pthread_mutex_unlock(&(pool->lock));
+      if (!rc) printf("%d [%d] gave up the lock in add_task\n", r, pool->num_tasks);
+      else printf("Error giving up the lock\n");
 
     } else {
       printf("There was an error ading to the queue\n");
@@ -127,18 +129,24 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument)
 int pool_destroy(pool_t *pool)
 {
     printf("Freeing resources\n");
-    //pthread_mutex_lock(&pool->lock);
+    int i;
+    shutdown = 1;
+    for(i=0; i < MAX_THREADS; i++) {
+      printf("Joining on thread %d\n", i);
+      pthread_cond_signal(&pool->notify);
+      pthread_join(pool->threads[i], NULL);
+      printf("Successfully joined %d\n", i);
+    }
     int err = 0;
     free(pool->threads);
     free(pool->queue);
-    //pthread_mutex_unlock(&pool->lock);
+    pthread_mutex_unlock(&pool->lock);
     pthread_mutex_destroy(&pool->lock);
     pthread_cond_destroy(&pool->notify);
+    free(pool);
     printf("Resources destroyed\n");
     return err;
 }
-
-
 
 /*
  * Work loop for threads. Should be passed into the pthread_create() method.
@@ -151,20 +159,27 @@ static void *thread_do_work(void *pool)
     r = rand() % 10000;
     pool_t *tpool = (pool_t*)pool;
     while(1) {
+      printf("%d is waiting for the lock at top of thread_do_work\n", r);
       pthread_mutex_lock(&(tpool->lock));
       while (tpool->num_tasks == 0) {
-        printf("%d is waiting for a signal\n", r);
+        printf("%d [%d] is waiting for a signal\n", r, tpool->num_tasks);
         pthread_cond_wait(&tpool->notify, &tpool->lock);
-        printf("%d recieved a signal, acquired lock in thread_do_work (%d in the queue)\n", r, tpool->num_tasks);
+        printf("%d [%d] recieved a signal, acquired lock in thread_do_work\n", r, tpool->num_tasks);
+        if (tpool->num_tasks == 0) { printf("%d woke up BUT THERE ARE NO TASKS TO DO!\n", r); }
+        if (shutdown) {
+          printf("%d is exiting\n", r);
+          pthread_exit(NULL);
+       }
       }
       if (tpool->num_tasks > 0) {
-        printf("%d is running a task in the queue in thread_do_work (%d in queue)\n", r, tpool->num_tasks);
+        printf("%d [%d] is running a task in the queue in thread_do_work\n", r, tpool->num_tasks);
         pool_task_t* next = tpool->queue->next;
         tpool->queue->function(tpool->queue->argument);
         tpool->queue = next;
+        printf("%d [%d] is decrementing the counter in thread_do_word\n", r, tpool->num_tasks);
         tpool->num_tasks--;
         rc = pthread_mutex_unlock(&tpool->lock);
-        if (!rc) { printf("%d gave up the lock in thread_do_work (%d left in queue)\n", r, tpool->num_tasks); fflush(stdout); }
+        if (!rc) { printf("%d [%d] gave up the lock in thread_do_work\n", r, tpool->num_tasks); fflush(stdout); }
         else printf("There was an error unlocking\n");
       } else {
         printf("A thread exited but didn't do anything\n");
