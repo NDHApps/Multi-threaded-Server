@@ -75,12 +75,15 @@ def run_correctness_trace(config, trace, host, port, _id=0):
     num_requests = int(config['requests'])
     for i in range(num_requests):
 
+        j = 0
         for req in trace:
             if ' ' in req:
                 req, assertion = req.split(' ', 1)
             else:
                 assertion = None
                 #have http_request return a value
+            print "Running request %d" % d
+            j += 1
             http_request(host, port, req, float(config['sleeptime']), _id=_id,\
             assertion=assertion)
 def run_performance_trace(config, trace, host, port, _id=0):
@@ -93,6 +96,7 @@ def run_performance_trace(config, trace, host, port, _id=0):
 
 def http_request(host, port, obj, sleeptime=0.0, method='GET', **kwargs):
 
+    print "Sending http request"
     _id = 0
     if '_id' in kwargs:
         _id = kwargs['_id']
@@ -112,10 +116,11 @@ def http_request(host, port, obj, sleeptime=0.0, method='GET', **kwargs):
         conn.close()
 
         responseStr = responseStr.strip()
+        print "Connection successful"
 
     except Exception as e:
         #HTTP Connection error
-        #print 'HTTP Connection Error', e
+        print 'HTTP Connection Error', e
         conn.close()
         failures.put(start)
         return False
