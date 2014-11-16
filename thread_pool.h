@@ -1,11 +1,11 @@
 #ifndef _THREADPOOL_H_
 #define _THREADPOOL_H_
 
-#define MAX_THREADS 1
+#define MAX_THREADS 2
 #define STANDBY_SIZE 8
 
 #define JDEBUG 1
-#define LDEBUG 0
+#define LDEBUG 1
 
 typedef struct pool_t pool_t;
 

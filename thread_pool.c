@@ -138,10 +138,8 @@ int pool_destroy(pool_t *pool)
     int i;
     shutdown = 1;
     for(i=0; i < MAX_THREADS; i++) {
-      printf("Joining on thread %d\n", i);
-      pthread_cond_signal(&pool->notify);
-      pthread_join(pool->threads[i], NULL);
-      printf("Successfully joined %d\n", i);
+      pthread_kill(pool->threads[i], 0);
+      printf("Successfully killed thread %d\n", i);
     }
     int err = 0;
     free(pool->threads);

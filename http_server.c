@@ -77,31 +77,38 @@ int main(int argc,char *argv[])
     serv_addr.sin_port = htons(server_port);
 
     // bind to socket
-    if ( bind(listenfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) != 0)
+    if (bind(listenfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) != 0)
     {
         perror("socket--bind");
         exit(errno);
     }
 
     // listen for incoming requests
-    listen(listenfd, 10);
+    listen(listenfd, 30);
 
     // handle connections loop (forever)
     while(1)
     {
+        if (JDEBUG) {
+          printf("Listening for connections...\n");
+          fflush(stdout);
+        }
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
-        jobno++;
-        if (JDEBUG) printf("Listening for tasks, added %d\n", jobno);
+        if (JDEBUG) {
+          printf("Connection received: Added job %d\n", ++jobno);
+          fflush(stdout);
+        }
         errno = pool_add_task(threadpool,
                 (void (*)(void *))handle_connection,
                 (void *)&connfd,
                 jobno);
+        printf("Added task to the pool\n");
         if(errno) printf("Error adding task\n");
     }
 }
 
-void shutdown_server(int signo){
+void shutdown_server(int signo) {
     pool_destroy(threadpool);
     unload_seats();
     close(listenfd);

@@ -118,6 +118,7 @@ void cancel(char* buf, int bufsize, int seat_id, int customer_id, int customer_p
             }
 
             pthread_mutex_unlock(&slock);
+            printf("Successfully cancelled seat\n");
             return;
         }
         curr = curr->next;
@@ -125,6 +126,7 @@ void cancel(char* buf, int bufsize, int seat_id, int customer_id, int customer_p
     snprintf(buf, bufsize, "Seat not found\n\n");
 
     pthread_mutex_unlock(&slock);
+    printf("Successfully cancelled seat\n");
     return;
 }
 
