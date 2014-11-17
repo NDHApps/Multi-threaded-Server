@@ -89,21 +89,16 @@ int main(int argc,char *argv[])
     // handle connections loop (forever)
     while(1)
     {
-        if (JDEBUG) {
-          printf("Listening for connections...\n");
-          fflush(stdout);
-        }
+        if (JDEBUG) printf("Listening for connections...\n");
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
-        if (JDEBUG) {
-          printf("Connection received: Added job %d\n", ++jobno);
-          fflush(stdout);
-        }
+        if (JDEBUG) printf("Connection received: Added job %d\n", ++jobno);
+
         errno = pool_add_task(threadpool,
                 (void*)&handle_connection,
                 (void*)connfd,
                 jobno);
-        printf("Added task to the pool\n");
+
         if(errno) printf("Error adding task\n");
     }
 }
