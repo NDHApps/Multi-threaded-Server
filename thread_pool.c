@@ -80,7 +80,7 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument, int jo
     int err = 0;
     int r = rand() % 10000;
 
-    if (LDEBUG) printf("%d [%d] is waiting in add_task \n", r, pool->num_tasks);
+    if (LDEBUG) printf("%d [%d] is waiting in add_task\n", r, pool->num_tasks);
     rc = pthread_mutex_lock(&(pool->lock));
     if (!rc) {
       if (LDEBUG) {
@@ -112,7 +112,7 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument, int jo
     if (!err) {
       pool->num_tasks++;
       if (LDEBUG) printf("%d [%d] signaled that he added to the queue\n", r, pool->num_tasks);
-      pthread_cond_signal(&(pool->notify));
+      pthread_cond_broadcast(&(pool->notify));
       rc = pthread_mutex_unlock(&(pool->lock));
       if (!rc) printf("%d [%d] gave up the lock in add_task\n", r, pool->num_tasks);
       else printf("Error giving up the lock\n");
