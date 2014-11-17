@@ -27,7 +27,7 @@ int jobno = 0;
 int main(int argc,char *argv[])
 {
     int flag, num_seats = 20;
-    //int connfd = 0;
+    int connfd = 0;
     struct sockaddr_in serv_addr;
 
     char send_buffer[BUFSIZE];
@@ -93,8 +93,7 @@ int main(int argc,char *argv[])
           printf("Listening for connections...\n");
           fflush(stdout);
         }
-        int *connfd = (int*)malloc(sizeof(int));
-        *connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 
         if (JDEBUG) {
           printf("Connection received: Added job %d\n", ++jobno);
@@ -102,7 +101,7 @@ int main(int argc,char *argv[])
         }
         errno = pool_add_task(threadpool,
                 (void*)&handle_connection,
-                (void *)connfd,
+                (void*)connfd,
                 jobno);
         printf("Added task to the pool\n");
         if(errno) printf("Error adding task\n");
