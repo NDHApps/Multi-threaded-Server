@@ -138,13 +138,12 @@ int pool_destroy(pool_t *pool)
     int i;
     shutdown = 1;
     for(i=0; i < MAX_THREADS; i++) {
-      pthread_kill(pool->threads[i], 0);
-      printf("Successfully killed thread %d\n", i);
+      pthread_cond_broadcast(&pool->notify);
+      pthread_join(pool->threads[i], 0);
     }
     int err = 0;
     free(pool->threads);
     free(pool->queue);
-    pthread_mutex_unlock(&pool->lock);
     pthread_mutex_destroy(&pool->lock);
     pthread_cond_destroy(&pool->notify);
     free(pool);
@@ -164,14 +163,15 @@ static void *thread_do_work(void *pool)
     pool_t *tpool = (pool_t*)pool;
     while(1) {
       pthread_mutex_lock(&(tpool->lock));
-      while (tpool->num_tasks == 0) {
+      while ((tpool->num_tasks == 0) && !shutdown) {
         if (LDEBUG) printf("%d [%d] is waiting for a signal\n", r, tpool->num_tasks);
         pthread_cond_wait(&tpool->notify, &tpool->lock);
         if (LDEBUG) printf("%d [%d] recieved a signal, acquired lock in thread_do_work\n", r, tpool->num_tasks);
-        if (shutdown) {
-          printf("%d is exiting\n", r);
-          pthread_exit(NULL);
-       }
+      }
+      if (shutdown) {
+        if (LDEBUG) printf("Unlocking and exiting\n");
+        pthread_mutex_unlock(&tpool->lock);
+        pthread_exit(NULL);
       }
       if (tpool->num_tasks > 0) {
         pool_task_t* next = tpool->queue->next;
