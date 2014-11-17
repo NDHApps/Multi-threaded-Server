@@ -168,37 +168,46 @@ int pool_destroy(pool_t *pool)
 static void *thread_do_work(void *pool)
 {
     int rc;
-    int r;
-    r = rand() % 10000;
     pool_t *tpool = (pool_t*)pool;
+
     while(1) {
+
       pthread_mutex_lock(&(tpool->lock));
+      /* Wait in a while loop, on the condition we are not shutting down and
+       * that there is work to be done.  */
       while ((tpool->num_tasks == 0) && !shutdown) {
-        if (LDEBUG) printf("%d [%d] is waiting for a signal\n", r, tpool->num_tasks);
+        if (LDEBUG) printf("Waiting for a signal\n");
         pthread_cond_wait(&tpool->notify, &tpool->lock);
-        if (LDEBUG) printf("%d [%d] recieved a signal, acquired lock in thread_do_work\n", r, tpool->num_tasks);
+        if (LDEBUG) printf("Recieved a signal, acquired lock in thread_do_work\n");
       }
+
+      /* If we're shutting down, have the thread that got through give up the
+       * lock and exit, so the join will terminate */
       if (shutdown) {
         if (LDEBUG) printf("Unlocking and exiting\n");
         pthread_mutex_unlock(&tpool->lock);
         pthread_exit(NULL);
       }
-      if (tpool->num_tasks > 0) {
-        pool_task_t* next = tpool->queue->next;
-        if (JDEBUG) printf("Running job %d\n", tpool->queue->id);
-        tpool->queue->function(tpool->queue->argument);
-        tpool->queue = next;
-        tpool->num_tasks--;
-        rc = pthread_mutex_unlock(&tpool->lock);
-        if (!rc) {
-         if (LDEBUG) printf("%d [%d] gave up the lock in thread_do_work\n", r, tpool->num_tasks); fflush(stdout);
-        }
-        else printf("There was an error unlocking\n");
-      } else {
-        printf("A thread exited but didn't do anything\n");
-      }
-    }
 
+      /* Pop an element off the front of queue, run its function, and give up the lock */
+      pool_task_t *job_to_run = tpool->queue;
+      pool_task_t *next = job_to_run->next;
+      if (JDEBUG) printf("Running job %d\n", tpool->queue->id);
+      tpool->queue = next;
+      tpool->num_tasks--;
+      rc = pthread_mutex_unlock(&tpool->lock);
+
+      /* The seats code is threadsafe, so it's okay to give up the lock before
+       * we run the function itself */
+
+      job_to_run->function(job_to_run->argument);
+
+      if (!rc) {
+       if (LDEBUG) printf("Gave up the lock in thread_do_work\n");
+      }
+      else printf("There was an error unlocking\n");
+
+    }
     pthread_exit(NULL);
     return(NULL);
 }
