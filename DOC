@@ -1,0 +1,28 @@
+MULTI-THREADED SERVER
+
+This server implements a threadpool and task queue to dispatch multiple threads
+onto incoming HTTP requests.  The threadpool is implemented as a simple array of
+threads, allocated at threadpool initialization time and put into a work loop.
+The queue is a singly-linked list with a head pointer that inserts at the end
+and dequeues from the front. While this is not the most efficient implementation
+of a queue, because the queue itself never exceeds a few elements, even under
+heavy load, inserting in O(n) should not result in noticeable performance drops.
+The threads wait on a condition variable which is signaled by a different thread
+when a task is added to the queue.  The thread that wakes up checks to confirm
+there are indeed elements in the queue (to protect from spurious wakeups), pops
+on off, unlocks the queue, and then runs the function from the task it was
+allotted.
+
+
+The seats are protected simply with a single mutex, which while less performant
+than having a mutex on a per-seat basis, was much easier to implement.  The
+seats are all locked before each operation on them, and unlocked when the
+function concludes.
+
+A note on debugging:  Two constants were used to control output of debug
+statements to the console.  LDEBUG and JDEBUG can be toggled in thread_pool.h to
+switch on and off printing of statements relating to locks and jobs respectively.
+In addition, pool_add_task takes an additional arguemtn, jobno, and pool_task_t
+has an extra parameter, id.  These numbers were used to debug when we noticed
+tasks were not completing, and we attempted to watch which tasks were the
+problem.  We've left them in for your interest and consideration.
