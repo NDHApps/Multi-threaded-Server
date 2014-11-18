@@ -26,3 +26,12 @@ In addition, pool_add_task takes an additional arguemtn, jobno, and pool_task_t
 has an extra parameter, id.  These numbers were used to debug when we noticed
 tasks were not completing, and we attempted to watch which tasks were the
 problem.  We've left them in for your interest and consideration.
+
+
+EXTRA CREDIT:
+
+A priority queue for passengers was implemented.  Jobs are added with an
+associated priority number, and the queue is kept in order of priority and
+iterms of the same priority are ordered by  time of arrival.  Due to
+difficulities and lack of knowledge of file descriptors, priorities are seeded
+via dummy data and not from the URL.

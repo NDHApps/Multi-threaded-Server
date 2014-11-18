@@ -284,3 +284,8 @@ int parse_int_arg(char* filename, char* arg)
     }
     return seatnum;
 }
+
+int getPriority() {
+
+  return rand() % 3;
+}

@@ -87,17 +87,20 @@ int main(int argc,char *argv[])
     listen(listenfd, 30);
 
     // handle connections loop (forever)
+    int priority = 0;
     while(1)
     {
         if (JDEBUG) printf("Listening for connections...\n");
         connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+        priority = getPriority(connfd);
 
         if (JDEBUG) printf("Connection received: Added job %d\n", ++jobno);
 
         errno = pool_add_task(threadpool,
                 (void*)&handle_connection,
                 (void*)connfd,
-                jobno);
+                jobno,
+                priority);
 
         if(errno) printf("Error adding task\n");
     }

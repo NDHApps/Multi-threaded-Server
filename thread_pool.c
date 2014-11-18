@@ -20,6 +20,7 @@ typedef struct __task_t {
     void *argument;
     struct __task_t *next;
     int id;
+    int priority;
 } pool_task_t;
 
 struct pool_t {
@@ -73,7 +74,7 @@ pool_t *pool_create(int queue_size, int num_threads)
  * Add a task to the threadpool
  *
  */
-int pool_add_task(pool_t *pool, void (*function)(void *), void *argument, int jobno)
+int pool_add_task(pool_t *pool, void (*function)(void *), void *argument, int jobno, int priority)
 {
     int rc;
 
@@ -96,22 +97,35 @@ int pool_add_task(pool_t *pool, void (*function)(void *), void *argument, int jo
     new_task->argument = argument;
     new_task->next = NULL;
     new_task->id = jobno;
+    new_task->priority = priority;
 
-
-    /* Iterate the queue, get to the end, put the new task on there
-     * This is an inefficient queue, but seeing as the queue rarely exceeded 1-2
-     * element, the O(n) time it takes to insert on the end is not significant
-     */
+    /* Iterate the threadpool and insert yourself in front of the first element
+     * you see with lower priority than you, this puts you at the end of the
+     * list of elements with the same priority as you */
     if (JDEBUG) printf("Adding job to the queue\n");
     if (pool->queue == NULL) {
+      /* Inserting in an empty queue */
       pool->queue = new_task;
     } else {
-      pool_task_t* curr;
+      pool_task_t *curr, *prev;
       curr = pool->queue;
-      while (curr->next != NULL) {
+      prev = NULL;
+      while ((curr->next != NULL) && (priority <= curr->next->priority)) {
+        prev = curr;
         curr = curr->next;
       }
-      curr->next = new_task;
+      if (prev == NULL) {
+        /* Inserting at the front of the queue */
+        new_task->next = curr;
+        pool->queue = new_task;
+      } else if (curr->next == NULL) {
+        /* Inserting at the end */
+        curr->next = new_task;
+      }else {
+        /* Inserting in the middle */
+        new_task->next = curr->next;
+        curr->next = new_task;
+      }
     }
 
     /* Wake up threads to do this work, and give up the lock */
